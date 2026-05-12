@@ -9,25 +9,22 @@ export default async function HomePage() {
     .from("containers")
     .select("status");
 
-  const availableCount = containers?.filter(c => c.status === "available").length || 0;
   const totalCount = containers?.length || 0;
-
-  // 获取在途箱数量
-  const { count: transitCount } = await supabase
-    .from("transit_containers")
-    .select("*", { count: "exact", head: true });
+  const inTransitCount = containers?.filter(c =>
+    (c.status || "").includes("在途") || (c.status || "").includes("回程")
+  ).length || 0;
 
   return (
     <div>
       {/* Hero Section */}
       <section className="relative min-h-[520px] flex items-center">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center bg-no-repeat"
           style={{ backgroundImage: `url('/hero-container.jpg')` }}
         >
           <div className="absolute inset-0 bg-gradient-to-r from-[#1E3A5F]/95 via-[#1E3A5F]/80 to-[#1E3A5F]/60" />
         </div>
-        
+
         <div className="relative max-w-7xl mx-auto px-4 py-20 w-full">
           <div className="max-w-2xl">
             <div className="inline-block bg-[#F97316] text-white text-sm px-3 py-1 rounded-full mb-4">
@@ -69,15 +66,15 @@ export default async function HomePage() {
               <div className="text-[#64748B] text-sm mt-1">库存总量</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-[#10B981]">{availableCount}</div>
+              <div className="text-3xl font-bold text-[#10B981]">{totalCount - inTransitCount}</div>
               <div className="text-[#64748B] text-sm mt-1">可用箱量</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-[#2563EB]">{transitCount || 0}</div>
-              <div className="text-[#64748B] text-sm mt-1">在途箱量</div>
+              <div className="text-3xl font-bold text-[#2563EB]">{inTransitCount}</div>
+              <div className="text-[#64748B] text-sm mt-1">在途/回程</div>
             </div>
             <div>
-              <div className="text-3xl font-bold text-[#2563EB]">40HQ</div>
+              <div className="text-3xl font-bold text-[#2563EB]">40HC</div>
               <div className="text-[#64748B] text-sm mt-1">主力箱型</div>
             </div>
           </div>
@@ -130,7 +127,7 @@ export default async function HomePage() {
                   </div>
                   <div>
                     <h4 className="font-medium text-[#1E3A5F]">现货充足</h4>
-                    <p className="text-[#64748B] text-sm mt-1">{totalCount}个40HQ现货箱，随时可用，缩短等待时间</p>
+                    <p className="text-[#64748B] text-sm mt-1">{totalCount}个集装箱，随时可用，缩短等待时间</p>
                   </div>
                 </div>
                 <div className="flex gap-4">
@@ -154,8 +151,8 @@ export default async function HomePage() {
               </div>
             </div>
             <div className="relative rounded-xl overflow-hidden h-80">
-              <img 
-                src="/hero-container.jpg" 
+              <img
+                src="/hero-container.jpg"
                 alt="集装箱港口"
                 className="w-full h-full object-cover"
               />
