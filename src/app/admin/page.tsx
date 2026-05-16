@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
+const ADMIN_PASSWORD = "ylghwl2025";
+
 type Container = {
   id: string;
   container_no: string;
@@ -58,6 +60,9 @@ const containerStatuses = ["available", "reserved", "in-use", "maintenance"];
 
 export default function AdminDashboard() {
   const supabase = createClient();
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [passwordInput, setPasswordInput] = useState("");
+  const [loginError, setLoginError] = useState(false);
   const [containers, setContainers] = useState<Container[]>([]);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -68,7 +73,30 @@ export default function AdminDashboard() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [addForm, setAddForm] = useState({ container_no: "", type: "40HQ", status: "available", location: "上海港" });
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => {
+    const saved = sessionStorage.getItem("admin_logged_in");
+    if (saved === "true") setLoggedIn(true);
+  }, []);
+
+  async function handleLogin() {
+    if (passwordInput === ADMIN_PASSWORD) {
+      setLoggedIn(true);
+      sessionStorage.setItem("admin_logged_in", "true");
+      setLoginError(false);
+      loadData();
+    } else {
+      setLoginError(true);
+      setPasswordInput("");
+    }
+  }
+
+  function handleLogout() {
+    setLoggedIn(false);
+    sessionStorage.removeItem("admin_logged_in");
+  }
+
+  useEffect(() => { if (loggedIn) loadData(); }, [loggedIn]);
+
   async function loadData() {
     setLoading(true);
     const [cRes, qRes, oRes] = await Promise.all([
@@ -122,12 +150,51 @@ export default function AdminDashboard() {
 
   function startEdit(c: Container) { setEditingContainer(c); setEditForm({ status: c.status, location: c.location, type: c.type }); }
 
+  // Login screen
+  if (!loggedIn) {
+    return (
+      <div className="min-h-screen bg-[#0F172A] flex items-center justify-center">
+        <div className="bg-[#1E293B] rounded-2xl p-8 w-full max-w-sm border border-white/10">
+          <div className="text-center mb-8">
+            <div className="text-5xl mb-4">🚢</div>
+            <h1 className="text-2xl font-bold text-white">杨凌国合</h1>
+            <p className="text-slate-400 text-sm mt-1">管理后台</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-slate-400 mb-2">输入管理员密码</label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={e => setPasswordInput(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleLogin()}
+                placeholder="请输入密码..."
+                className={`w-full bg-slate-800 border ${loginError ? "border-red-500" : "border-white/20"} rounded-lg px-4 py-3 text-white focus:outline-none focus:border-blue-500`}
+              />
+              {loginError && <p className="text-red-400 text-sm mt-2">密码错误，请重试</p>}
+            </div>
+            <button
+              onClick={handleLogin}
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition"
+            >
+              进入后台
+            </button>
+          </div>
+          <div className="mt-6 text-center">
+            <Link href="/" className="text-sm text-slate-500 hover:text-slate-300 transition">← 返回首页</Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#0F172A] text-white">
       <div className="bg-[#1E293B] border-b border-white/10 px-6 py-4 flex items-center justify-between">
         <div><h1 className="text-xl font-bold flex items-center gap-2"><span className="text-2xl">🚢</span> 杨凌国合集装箱租赁</h1><p className="text-blue-300 text-xs mt-0.5">管理后台 · 内部使用</p></div>
         <div className="flex items-center gap-4">
           <Link href="/" className="text-sm text-blue-300 hover:text-white transition">返回首页</Link>
+          <button onClick={handleLogout} className="text-sm text-slate-400 hover:text-white transition border border-white/20 px-3 py-1 rounded-lg">退出登录</button>
           <div className="text-xs text-slate-400">{new Date().toLocaleDateString("zh-CN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</div>
         </div>
       </div>
@@ -228,14 +295,13 @@ export default function AdminDashboard() {
           <div>
             <h3 className="text-lg font-semibold mb-4">订单管理</h3>
             <div className="bg-[#1E293B] rounded-2xl border border-white/10 overflow-hidden">
-              <table className="w-full text-sm"><thead><tr className="bg-slate-800 text-slate-400 text-left"><th className="px-4 py-3 font-medium">订单号</th><th className="px-4 py-3 font-medium">路线</th><th className="px-4 py-3 font-medium">箱型/量</th><th className="px-4 py-3 font-medium">租金(USD)</th><th className="px-4 py-3 font-medium">灭失费</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">时间</th></tr></thead>
+              <table className="w-full text-sm"><thead><tr className="bg-slate-800 text-slate-400 text-left"><th className="px-4 py-3 font-medium">订单号</th><th className="px-4 py-3 font-medium">路线</th><th className="px-4 py-3 font-medium">箱型/量</th><th className="px-4 py-3 font-medium">租金(USD)</th><th className="px-4 py-3 font-medium">状态</th><th className="px-4 py-3 font-medium">时间</th></tr></thead>
               <tbody className="divide-y divide-white/5">{orders.map(o => (
                 <tr key={o.id} className="hover:bg-slate-800/50">
                   <td className="px-4 py-3 font-mono text-emerald-400">{o.order_no}</td>
                   <td className="px-4 py-3">{o.origin} → {o.destination}</td>
                   <td className="px-4 py-3">{o.container_type} × {o.quantity}</td>
                   <td className="px-4 py-3 text-emerald-400">${o.rent_usd}</td>
-                  <td className="px-4 py-3">${o.loss_fee_usd}</td>
                   <td className="px-4 py-3"><span className={`px-2 py-1 rounded-full text-xs ${statusColor(o.status).bg} ${statusColor(o.status).text}`}>{statusLabel(o.status)}</span></td>
                   <td className="px-4 py-3 text-slate-500">{new Date(o.created_at).toLocaleDateString("zh-CN")}</td>
                 </tr>
